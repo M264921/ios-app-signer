@@ -117,7 +117,32 @@ struct ProvisioningProfile {
         let newIdentifier = teamID + "." + trueAppID
         entitlements["application-identifier"] = newIdentifier as AnyObject
         Log.write("Updated application-identifier from '\(oldIdentifier)' to '\(newIdentifier)'")
-        // TODO: update any other wildcard entitlements
+
+        let oldPrefix = oldIdentifier.replacingOccurrences(of: "*", with: "")
+        let newPrefix = newIdentifier
+
+        for (key, value) in entitlements {
+            if key == "application-identifier" { continue }
+            if let stringValue = value as? String, stringValue.contains(oldPrefix) {
+                let updated = stringValue.replacingOccurrences(of: oldPrefix, with: newPrefix)
+                if updated != stringValue {
+                    entitlements[key] = updated as AnyObject
+                    Log.write("Updated \(key) from '\(stringValue)' to '\(updated)'")
+                }
+            } else if let arrayValue = value as? [String] {
+                var newArray = arrayValue
+                var changed = false
+                for (index, element) in arrayValue.enumerated() where element.contains(oldPrefix) {
+                    let updated = element.replacingOccurrences(of: oldPrefix, with: newPrefix)
+                    newArray[index] = updated
+                    changed = true
+                    Log.write("Updated \(key)[\(index)] from '\(element)' to '\(updated)'")
+                }
+                if changed {
+                    entitlements[key] = newArray as AnyObject
+                }
+            }
+        }
     }
     
     func getEntitlementsPlist() -> String? {
